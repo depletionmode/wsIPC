@@ -45,7 +45,7 @@ int main(int ac, char *av[])
 		return -1;
 	}
 
-	printf("[+] PageCacheIpc library loaded successfully @ 0x%p.\n", lib);
+	printf("[+] wsIpc library loaded successfully @ 0x%p.\n", lib);
 
 	IpcSend pIpcSend = (IpcSend)GetProcAddress(lib, "Send");
 	IpcReceive pIpcReceive = (IpcReceive)GetProcAddress(lib, "Receive");
