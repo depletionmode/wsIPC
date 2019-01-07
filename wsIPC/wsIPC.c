@@ -46,62 +46,62 @@ VOID _encodeByte(_In_ BYTE Value);
 VOID _decodeByte(_Out_ BYTE* Value);
 
 HRESULT Send(
-	_In_reads_bytes_(BufferSize) PBYTE Buffer,
-	_In_ ULONG BufferSize
+    _In_reads_bytes_(BufferSize) PBYTE Buffer,
+    _In_ ULONG BufferSize
 )
 {
-	PBYTE currentByte = Buffer;
+    PBYTE currentByte = Buffer;
 
-	_clearDataDone();
+    _clearDataDone();
 
-	while (currentByte < Buffer + BufferSize) {
-		_clearDataReady();
-		_waitOnReceiverReady();
-		_encodeByte(*currentByte++);
-		_markDataReady();
-		_waitOnReceiverDone();
-	}
+    while (currentByte < Buffer + BufferSize) {
+        _clearDataReady();
+        _waitOnReceiverReady();
+        _encodeByte(*currentByte++);
+        _markDataReady();
+        _waitOnReceiverDone();
+    }
 
-	_markDataDone();
+    _markDataDone();
 
-	return S_OK;
+    return S_OK;
 }
 
 HRESULT Receive(
-	_Out_writes_bytes_(*BytesReceived) BYTE* Buffer,
-	_In_ SIZE_T BufferSize,
-	_Out_ SIZE_T *BytesReceived
+    _Out_writes_bytes_(*BytesReceived) BYTE* Buffer,
+    _In_ SIZE_T BufferSize,
+    _Out_ SIZE_T *BytesReceived
 )
 {
-	PBYTE currentByte = Buffer;
+    PBYTE currentByte = Buffer;
 
-	*BytesReceived = 0;
+    *BytesReceived = 0;
+    
+    _clearReceiverDone();
 
-	_clearReceiverDone();
+    do {
+        _markReceiverReady();
+        _clearReceiverDone();
+        _waitOnDataReady();
+        _clearReceiverReady();
+        _decodeByte(currentByte++);
 
-	do {
-		_markReceiverReady();
-		_clearReceiverDone();
-		_waitOnDataReady();
-		_clearReceiverReady();
-		_decodeByte(currentByte++);
+        if (currentByte > Buffer + BufferSize) {
+            //
+            // Overflow passed end of buffer
+            //
 
-		if (currentByte > Buffer + BufferSize) {
-			//
-			// Overflow passed end of buffer
-			//
+            return E_ABORT;
+        }
 
-			return E_ABORT;
-		}
+        *BytesReceived++;
 
-		*BytesReceived++;
+        _markReceiverDone();
 
-		_markReceiverDone();
+        Sleep(100);    // Hack
+    } while (!_testDataDone());
 
-		Sleep(100);	// Hack
-	} while (!_testDataDone());
-
-	return S_OK;
+    return S_OK;
 }
 
 VOID _markReceiverReady() { volatile BYTE nooneCares = *(BYTE*)g_recvReady; }
@@ -121,98 +121,98 @@ VOID _waitOnDataReady() { _waitOnPage((PVOID)g_dataReady); }
 BOOL _testDataDone() { return _testPageInWorkingSet((PVOID)g_dataDone); }
 
 VOID _waitOnPage(_In_ PVOID Address) {
-	//
-	// Test Address page for waiting data.
-	//
+    //
+    // Test Address page for waiting data.
+    //
 
-	while (!_testPageInWorkingSet(Address)) {
-		Sleep(READY_POLL_DELAY_MS);
-	}
+    while (!_testPageInWorkingSet(Address)) {
+        Sleep(READY_POLL_DELAY_MS);
+    }
 }
 
 VOID _clearByte() {
-	ULONG bit;
+    ULONG bit;
 
-	bit = DATA_SIZE;
-	while (bit-- > 0) {
-		//
-		// Clear all data bits by evicting g_Data pages.
-		//
+    bit = DATA_SIZE;
+    while (bit-- > 0) {
+        //
+        // Clear all data bits by evicting g_Data pages.
+        //
 
-		VirtualUnlock((PVOID)GET_DATAPAGE_ADDRESS(bit), PAGE_SIZE);
-	}
+        VirtualUnlock((PVOID)GET_DATAPAGE_ADDRESS(bit), PAGE_SIZE);
+    }
 }
 
 VOID _encodeByte(_In_ BYTE Value) {
-	ULONG bit;
-	volatile BYTE nooneCares;
+    ULONG bit;
+    volatile BYTE nooneCares;
 
-	_clearByte();
+    _clearByte();
 
-	bit = DATA_SIZE;
-	while (bit-- > 0) {
-		if (0 != (Value & (1 << bit))) {
-			//
-			// Encode bit by making page resident.
-			//
+    bit = DATA_SIZE;
+    while (bit-- > 0) {
+        if (0 != (Value & (1 << bit))) {
+            //
+            // Encode bit by making page resident.
+            //
 
-			nooneCares = *GET_DATAPAGE_ADDRESS(bit);
-		}
-	}
+            nooneCares = *GET_DATAPAGE_ADDRESS(bit);
+        }
+    }
 }
 
 VOID _decodeByte(_Out_ BYTE* Value) {
-	ULONG bit;
-	volatile BYTE nooneCares;
-	PSAPI_WORKING_SET_EX_INFORMATION pv[DATA_SIZE];
+    ULONG bit;
+    volatile BYTE nooneCares;
+    PSAPI_WORKING_SET_EX_INFORMATION pv[DATA_SIZE];
 
-	//
-	// Populate working set information structure array and make all data pages 
-	// resident.
-	//
+    //
+    // Populate working set information structure array and make all data pages 
+    // resident.
+    //
 
-	bit = DATA_SIZE;
-	while (bit-- > 0) {
-		pv[bit].VirtualAddress = (PVOID)GET_DATAPAGE_ADDRESS(bit);
-		nooneCares = *GET_DATAPAGE_ADDRESS(bit);
-	}
+    bit = DATA_SIZE;
+    while (bit-- > 0) {
+        pv[bit].VirtualAddress = (PVOID)GET_DATAPAGE_ADDRESS(bit);
+        nooneCares = *GET_DATAPAGE_ADDRESS(bit);
+    }
 
-	//
-	// Query working set metadata.
-	//
+    //
+    // Query working set metadata.
+    //
 
-	QueryWorkingSetEx(GetCurrentProcess(), pv, sizeof(pv));
+    QueryWorkingSetEx(GetCurrentProcess(), pv, sizeof(pv));
 
-	//
-	// Decode bits from ShareCount
-	//
+    //
+    // Decode bits from ShareCount
+    //
 
-	*Value = 0;
+    *Value = 0;
 
-	bit = DATA_SIZE;
-	while (bit-- > 0) {
-		if (pv[bit].VirtualAttributes.ShareCount > 1) {
-			*Value |= 1 << bit;
-		}
-	}
+    bit = DATA_SIZE;
+    while (bit-- > 0) {
+        if (pv[bit].VirtualAttributes.ShareCount > 1) {
+            *Value |= 1 << bit;
+        }
+    }
 }
 
 BOOL _testPageInWorkingSet(_In_ PVOID Address) {
-	PSAPI_WORKING_SET_EX_INFORMATION pv;
+    PSAPI_WORKING_SET_EX_INFORMATION pv;
 
-	pv.VirtualAddress = Address;
+    pv.VirtualAddress = Address;
 
-	//
-	// Bring Address resident.
-	//
+    //
+    // Bring Address resident.
+    //
 
-	volatile BYTE nooneCares = *(BYTE*)Address;
+    volatile BYTE nooneCares = *(BYTE*)Address;
 
-	//
-	// Query working set metadata for ShareCount.
-	//
+    //
+    // Query working set metadata for ShareCount.
+    //
 
-	BOOL res = QueryWorkingSetEx(GetCurrentProcess(), &pv, sizeof(pv));
+    BOOL res = QueryWorkingSetEx(GetCurrentProcess(), &pv, sizeof(pv));
 
-	return pv.VirtualAttributes.ShareCount > 1;
+    return pv.VirtualAttributes.ShareCount > 1;
 }
