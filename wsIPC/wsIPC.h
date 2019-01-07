@@ -1,3 +1,7 @@
+//
+// @depletionmode 2018
+//
+
 #pragma once
 #include <Windows.h>
 

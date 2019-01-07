@@ -1,3 +1,6 @@
+//
+// @depletionmode 2018
+//
 
 #include <Windows.h>
 #include <stdio.h>
