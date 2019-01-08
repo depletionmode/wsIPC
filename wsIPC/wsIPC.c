@@ -85,6 +85,8 @@ HRESULT Receive(
         _waitOnDataReady();
         _clearReceiverReady();
         _decodeByte(currentByte++);
+        *BytesReceived++;
+        _markReceiverDone();
 
         if (currentByte > Buffer + BufferSize) {
             //
@@ -93,10 +95,6 @@ HRESULT Receive(
 
             return E_ABORT;
         }
-
-        *BytesReceived++;
-
-        _markReceiverDone();
 
         Sleep(100);    // Hack
     } while (!_testDataDone());
