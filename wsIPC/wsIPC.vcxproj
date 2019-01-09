@@ -117,9 +117,6 @@
   <ItemGroup>
     <ClCompile Include="wsIPC.c" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="wsIPC.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
