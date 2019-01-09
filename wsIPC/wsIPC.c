@@ -51,17 +51,17 @@ HRESULT Send(
 {
     PBYTE currentByte = Buffer;
 
-	//
-	// Set up initial state.
-	//
+    //
+    // Set up initial state.
+    //
 
     _clearDataDone();
-	_markDataReady(); _clearDataReady();
-	_markDataReady(); _clearDataReady();
+    _markDataReady(); _clearDataReady();
+    _markDataReady(); _clearDataReady();
 
     while (currentByte < Buffer + BufferSize) {
         _waitOnReceiverReady();
-		_clearDataReady();
+        _clearDataReady();
         _encodeByte(*currentByte++);
         _markDataReady();
     }
@@ -81,12 +81,12 @@ HRESULT Receive(
 
     *BytesReceived = 0;
 
-	//
-	// Set up initial state.
-	//
+    //
+    // Set up initial state.
+    //
 
-	_markReceiverReady(); _clearReceiverReady();
-	_markReceiverReady(); _clearReceiverReady();
+    _markReceiverReady(); _clearReceiverReady();
+    _markReceiverReady(); _clearReceiverReady();
 
     do {
         _markReceiverReady();
