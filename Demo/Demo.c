@@ -82,7 +82,7 @@ int main(int ac, char *av[])
         }
     }
 
-    Sleep(2000);
+    Sleep(200);
 
     CloseHandle(lib);
 
