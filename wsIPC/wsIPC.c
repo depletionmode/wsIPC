@@ -6,15 +6,15 @@
 
 __declspec(dllexport)
 HRESULT Send(
-	_In_reads_bytes_(BufferSize) PBYTE Buffer,
-	_In_ ULONG BufferSize
+    _In_reads_bytes_(BufferSize) PBYTE Buffer,
+    _In_ ULONG BufferSize
 );
 
 __declspec(dllexport)
 HRESULT Receive(
-	_Out_writes_bytes_(*BytesReceived) BYTE* Buffer,
-	_In_ SIZE_T BufferSize,
-	_Out_ SIZE_T *BytesReceived
+    _Out_writes_bytes_(*BytesReceived) BYTE* Buffer,
+    _In_ SIZE_T BufferSize,
+    _Out_ SIZE_T *BytesReceived
 );
 
 #include <Psapi.h>
@@ -62,7 +62,7 @@ HRESULT Send(
 
     _markDataDone();
 
-	Sleep(1000);	// Hack to live long enough for receiver to read DataDone flag.
+    Sleep(1000);    // Hack to live long enough for receiver to read DataDone flag.
 
     return S_OK;
 }
@@ -93,7 +93,7 @@ HRESULT Receive(
 
         if (currentByte > Buffer + BufferSize) {
             //
-            // Overflow passed end of buffer
+            // Overflow passed end of buffer.
             //
 
             return E_ABORT;
@@ -108,7 +108,7 @@ HRESULT Receive(
 #pragma const_seg(".ipcseg")
 static const BYTE g_recvReady[2][PAGE_SIZE] = { 0 };
 static const BYTE g_dataReady[2][PAGE_SIZE] = { 0 };
-static const BYTE g_dataDone[PAGE_SIZE] = { 0 };
+static const BYTE g_dataDone[PAGE_SIZE]     = { 0 };
 
 #define DATA_SIZE sizeof(BYTE) * 8
 static const BYTE g_Data[PAGE_SIZE * DATA_SIZE];
