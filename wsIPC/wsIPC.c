@@ -17,7 +17,6 @@ HRESULT Receive(
 	_Out_ SIZE_T *BytesReceived
 );
 
-
 #include <Psapi.h>
 
 VOID _markReceiverReady();
