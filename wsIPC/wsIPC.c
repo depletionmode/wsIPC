@@ -19,6 +19,7 @@ static const BYTE g_Data[PAGE_SIZE * DATA_SIZE];
 #pragma comment(linker, "/SECTION:.ipcseg,R")
 
 #define GET_DATAPAGE_ADDRESS(x) (g_Data + (x * PAGE_SIZE))
+#define TOGGLE_PAGE(x)  (x ^= 1)
 
 #define READY_POLL_DELAY_MS 50
 
@@ -109,16 +110,16 @@ HRESULT Receive(
 
 #include <stdio.h>
 
-VOID _markReceiverReady() { volatile BYTE nooneCares = *(BYTE*)g_recvReady[g_CurrentReceiverReadyPage ^= 1]; }
-VOID _markDataReady() { volatile BYTE nooneCares = *(BYTE*)g_dataReady[g_CurrentDataReadyPage ^= 1]; }
-VOID _markDataDone() { volatile BYTE nooneCares = *(BYTE*)g_dataDone; }
+VOID _markReceiverReady() { volatile BYTE nooneCares = *(BYTE*)g_recvReady[TOGGLE_PAGE(g_CurrentReceiverReadyPage)]; }
+VOID _markDataReady()     { volatile BYTE nooneCares = *(BYTE*)g_dataReady[TOGGLE_PAGE(g_CurrentDataReadyPage)];     }
+VOID _markDataDone()      { volatile BYTE nooneCares = *(BYTE*)g_dataDone;                                           }
 
 VOID _clearReceiverReady() { VirtualUnlock((PVOID)g_recvReady[g_CurrentReceiverReadyPage], PAGE_SIZE); }
-VOID _clearDataReady() { VirtualUnlock((PVOID)g_dataReady[g_CurrentDataReadyPage], PAGE_SIZE); }
-VOID _clearDataDone() { VirtualUnlock((PVOID)g_dataDone, PAGE_SIZE); }
+VOID _clearDataReady()     { VirtualUnlock((PVOID)g_dataReady[g_CurrentDataReadyPage],     PAGE_SIZE); }
+VOID _clearDataDone()      { VirtualUnlock((PVOID)g_dataDone,                              PAGE_SIZE); }
 
-VOID _waitOnReceiverReady() { _waitOnPage((PVOID)g_recvReady[g_CurrentReceiverReadyPage ^= 1]);}
-VOID _waitOnDataReady() { _waitOnPage((PVOID)g_dataReady[g_CurrentDataReadyPage ^= 1]); }
+VOID _waitOnReceiverReady() { _waitOnPage((PVOID)g_recvReady[TOGGLE_PAGE(g_CurrentReceiverReadyPage)]); }
+VOID _waitOnDataReady()     { _waitOnPage((PVOID)g_dataReady[TOGGLE_PAGE(g_CurrentDataReadyPage)]);     }
 
 BOOL _testDataDone() { return _testPageInWorkingSet((PVOID)g_dataDone); printf("_testDataDone\n");}
 
