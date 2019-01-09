@@ -6,23 +6,6 @@
 
 #include <Psapi.h>
 
-#define PAGE_SIZE 0x1000
-
-#pragma const_seg(".ipcseg")
-static const BYTE g_recvReady[2][PAGE_SIZE] = { 0 };
-static const BYTE g_dataReady[2][PAGE_SIZE] = { 0 };
-static const BYTE g_dataDone[PAGE_SIZE] = { 0 };
-
-#define DATA_SIZE sizeof(BYTE) * 8
-static const BYTE g_Data[PAGE_SIZE * DATA_SIZE];
-#pragma const_seg()
-#pragma comment(linker, "/SECTION:.ipcseg,R")
-
-#define GET_DATAPAGE_ADDRESS(x) (g_Data + (x * PAGE_SIZE))
-#define TOGGLE_PAGE(x)  (x ^= 1)
-
-#define READY_POLL_DELAY_MS 50
-
 VOID _markReceiverReady();
 VOID _markDataReady();
 VOID _markDataDone();
@@ -41,9 +24,6 @@ BOOL _testPageInWorkingSet(_In_ PVOID Address);
 VOID _clearByte();
 VOID _encodeByte(_In_ BYTE Value);
 VOID _decodeByte(_Out_ BYTE* Value);
-
-ULONG g_CurrentDataReadyPage = 0;
-ULONG g_CurrentReceiverReadyPage = 0;
 
 HRESULT Send(
     _In_reads_bytes_(BufferSize) PBYTE Buffer,
@@ -68,6 +48,8 @@ HRESULT Send(
     }
 
     _markDataDone();
+
+	Sleep(1000);	// Hack to live long enough for receiver to read DataDone flag.
 
     return S_OK;
 }
@@ -108,7 +90,25 @@ HRESULT Receive(
     return S_OK;
 }
 
-#include <stdio.h>
+#define PAGE_SIZE 0x1000
+
+#pragma const_seg(".ipcseg")
+static const BYTE g_recvReady[2][PAGE_SIZE] = { 0 };
+static const BYTE g_dataReady[2][PAGE_SIZE] = { 0 };
+static const BYTE g_dataDone[PAGE_SIZE] = { 0 };
+
+#define DATA_SIZE sizeof(BYTE) * 8
+static const BYTE g_Data[PAGE_SIZE * DATA_SIZE];
+#pragma const_seg()
+#pragma comment(linker, "/SECTION:.ipcseg,R")
+
+#define GET_DATAPAGE_ADDRESS(x) (g_Data + (x * PAGE_SIZE))
+#define TOGGLE_PAGE(x)  (x ^= 1)
+
+#define READY_POLL_DELAY_MS 50
+
+ULONG g_CurrentDataReadyPage = 0;
+ULONG g_CurrentReceiverReadyPage = 0;
 
 VOID _markReceiverReady() { volatile BYTE nooneCares = *(BYTE*)g_recvReady[TOGGLE_PAGE(g_CurrentReceiverReadyPage)]; }
 VOID _markDataReady()     { volatile BYTE nooneCares = *(BYTE*)g_dataReady[TOGGLE_PAGE(g_CurrentDataReadyPage)];     }
@@ -121,7 +121,7 @@ VOID _clearDataDone()      { VirtualUnlock((PVOID)g_dataDone,                   
 VOID _waitOnReceiverReady() { _waitOnPage((PVOID)g_recvReady[TOGGLE_PAGE(g_CurrentReceiverReadyPage)]); }
 VOID _waitOnDataReady()     { _waitOnPage((PVOID)g_dataReady[TOGGLE_PAGE(g_CurrentDataReadyPage)]);     }
 
-BOOL _testDataDone() { return _testPageInWorkingSet((PVOID)g_dataDone); printf("_testDataDone\n");}
+BOOL _testDataDone() { return _testPageInWorkingSet((PVOID)g_dataDone); }
 
 VOID _waitOnPage(_In_ PVOID Address) {
     //
